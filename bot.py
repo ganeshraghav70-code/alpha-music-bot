@@ -1,39 +1,30 @@
 import os
-from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+PORT = int(os.getenv("PORT", "10000"))
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🎵 ALPHA Music Bot\n\n"
-        "Welcome! 🤖\n"
-        "Voice Chat Music System is ready.\n\n"
-        "Use /help to see commands."
-    )
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🎧 ALPHA Music Commands\n\n"
-        "/play - Play music\n"
-        "/pause - Pause music\n"
-        "/resume - Resume music\n"
-        "/skip - Skip track\n"
-        "/stop - Stop music\n"
-        "/queue - Show queue"
-    )
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"ALPHA Music Bot is running!")
 
-def main():
-    if not BOT_TOKEN:
-        raise ValueError("BOT_TOKEN is not configured.")
+    def log_message(self, format, *args):
+        pass
 
-    app = Application.builder().token(BOT_TOKEN).build()
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
+def start_health_server():
+    server = HTTPServer(("0.0.0.0", PORT), HealthHandler)
+    server.serve_forever()
 
-    print("ALPHA Music Bot is running...")
-    app.run_polling()
 
 if __name__ == "__main__":
-    main()
+    threading.Thread(target=start_health_server, daemon=True).start()
+
+    print("ALPHA Music Bot started.")
+    print(f"Health server running on port {PORT}")
+
+    # Telegram/VC engine will be started here.
+    threading.Event().wait()
